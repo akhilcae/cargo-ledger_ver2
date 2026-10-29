@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cargo Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F5F1;
+    --panel:#FFFFFF;
+    --ink:#1D2430;
+    --ink-soft:#5B6472;
+    --line:#E3E1DA;
+    --navy:#1B2A3F;
+    --navy-soft:#2C3E58;
+    --amber:#D98A34;
+    --amber-soft:#F3E3CD;
+    --green:#3A7D52;
+    --green-soft:#DFEFE3;
+    --red:#C0503F;
+    --red-soft:#F5DFDA;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Inter',sans-serif; font-size:14px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .app{display:flex; min-height:100vh;}
+
+  /* Sidebar */
+  .sidebar{
+    width:220px; background:var(--navy); color:#EAECEF;
+    display:flex; flex-direction:column; flex-shrink:0;
+  }
+  .brand{
+    padding:22px 20px 18px; border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .brand-mark{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px; letter-spacing:0.2px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .brand-mark .dot{width:9px;height:9px;border-radius:2px;background:var(--amber); transform:rotate(45deg); display:inline-block;}
+  .brand-sub{font-size:11px; color:#9AA6B5; margin-top:4px; letter-spacing:0.4px; text-transform:uppercase;}
+  .nav{padding:14px 10px; flex:1;}
+  .nav-item{
+    display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:2px;
+    border-radius:8px; cursor:pointer; color:#C7CEDA; font-size:13.5px; font-weight:500;
+    transition:background 0.15s, color 0.15s;
+  }
+  .nav-item svg{width:16px;height:16px; flex-shrink:0;}
+  .nav-item:hover{background:rgba(255,255,255,0.06); color:#fff;}
+  .nav-item.active{background:var(--amber); color:#241705; font-weight:600;}
+  .sidebar-foot{padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); font-size:11px; color:#7C8798;}
+
+  /* Main */
+  .main{flex:1; padding:28px 34px; max-width:1180px;}
+  .page-head{display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:22px; flex-wrap:wrap; gap:12px;}
+  .page-title{font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; margin:0;}
+  .page-eyebrow{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--amber); font-weight:600; margin-bottom:4px;}
+  .btn{
+    background:var(--navy); color:#fff; border:none; padding:9px 16px; border-radius:8px;
+    font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif;
+    display:inline-flex; align-items:center; gap:6px; transition:background 0.15s;
+  }
+  .btn:hover{background:var(--navy-soft);}
+  .btn.amber{background:var(--amber); color:#241705;}
+  .btn.amber:hover{background:#c67c28;}
+  .btn.ghost{background:transparent; color:var(--ink-soft); border:1px solid var(--line);}
+  .btn.ghost:hover{background:#fff; color:var(--ink);}
+  .btn.small{padding:6px 11px; font-size:12px;}
+  .btn.danger{background:transparent; color:var(--red); border:1px solid var(--red-soft);}
+
+  /* Cards */
+  .grid{display:grid; gap:16px;}
+  .grid.cols-4{grid-template-columns:repeat(4,1fr);}
+  .grid.cols-2{grid-template-columns:repeat(2,1fr);}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px;
+  }
+  .stat-label{font-size:11px; text-transform:uppercase; letter-spacing:0.6px; color:var(--ink-soft); font-weight:600; margin-bottom:8px;}
+  .stat-value{font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700;}
+  .stat-value.mono{font-family:'JetBrains Mono',monospace;}
+  .stat-sub{font-size:12px; color:var(--ink-soft); margin-top:4px;}
+
+  .panel-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px; margin:0 0 12px;}
+
+  /* Table */
+  table{width:100%; border-collapse:collapse;}
+  th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--ink-soft);
+    padding:8px 10px; border-bottom:1px solid var(--line); font-weight:600;
+  }
+  td{padding:10px 10px; border-bottom:1px solid #F0EFE9; font-size:13.5px; vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#FBFAF7;}
+  .sku{font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--navy); background:#EEF1F5; padding:2px 7px; border-radius:5px;}
+
+  .badge{
+    display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600;
+    text-transform:uppercase; letter-spacing:0.3px;
+  }
+  .badge.open{background:var(--amber-soft); color:#8A5A15;}
+  .badge.done{background:var(--green-soft); color:var(--green);}
+  .badge.low{background:var(--red-soft); color:var(--red);}
+  .badge.ok{background:var(--green-soft); color:var(--green);}
+
+  /* Size dropdown inside table */
+  .size-select{
+    padding:5px 8px; border:1px solid var(--line); border-radius:6px; font-size:12.5px;
+    font-family:'JetBrains Mono',monospace; background:#FBFAF8; color:var(--ink); cursor:pointer;
+  }
+  .size-select:focus{outline:none; border-color:var(--amber);}
+  .filter-bar{display:flex; align-items:center; gap:8px; margin-bottom:14px;}
+  .filter-bar label{font-size:12px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.3px;}
+
+  .empty{
+    text-align:center; padding:50px 20px; color:var(--ink-soft);
+  }
+  .empty .stamp{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px; color:var(--ink);
+    border:2px dashed var(--line); display:inline-block; padding:10px 18px; border-radius:8px; margin-bottom:10px; transform:rotate(-1deg);
+  }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(20,24,32,0.45); display:none; align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:#fff; border-radius:12px; width:100%; max-width:480px; max-height:88vh; overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,0.25);
+  }
+  .modal-head{
+    padding:18px 22px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;
+  }
+  .modal-head h3{font-family:'Space Grotesk',sans-serif; margin:0; font-size:16px;}
+  .modal-body{padding:18px 22px;}
+  .modal-foot{padding:14px 22px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.3px;}
+  .field input, .field select{
+    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:7px; font-size:13.5px; font-family:'Inter',sans-serif; background:#FBFAF8;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--amber);}
+  .close-x{cursor:pointer; color:var(--ink-soft); font-size:20px; line-height:1; background:none; border:none;}
+  .line-item-row{display:flex; gap:8px; align-items:flex-end; margin-bottom:8px;}
+  .line-item-row .field{flex:1; margin-bottom:0;}
+  .remove-line{color:var(--red); background:none; border:none; cursor:pointer; font-size:18px; padding:0 6px;}
+
+  .toast{
+    position:fixed; bottom:24px; right:24px; background:var(--navy); color:#fff; padding:11px 18px; border-radius:8px;
+    font-size:13px; font-weight:500; box-shadow:0 8px 24px rgba(0,0,0,0.2); opacity:0; transform:translateY(8px);
+    transition:opacity 0.2s, transform 0.2s; z-index:100; pointer-events:none;
+  }
+  .toast.show{opacity:1; transform:translateY(0);}
+
+  .subtabs{display:flex; gap:6px; margin-bottom:18px;}
+  .subtab{padding:7px 14px; border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer; border:1px solid var(--line); background:#fff; color:var(--ink-soft);}
+  .subtab.active{background:var(--navy); color:#fff; border-color:var(--navy);}
+
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-thumb{background:#D5D3CA; border-radius:6px;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><span class="dot"></span>Cargo Ledger</div>
+      <div class="brand-sub">Warehouse & Order Control</div>
+    </div>
+    <div class="nav" id="nav"></div>
+    <div class="sidebar-foot">
+      Data saved in this browser only.
+      <div style="margin-top:8px; display:flex; gap:6px;">
+        <button class="btn ghost small" style="color:#EAECEF; border-color:rgba(255,255,255,0.2);" onclick="exportBackup()">Export</button>
+        <label class="btn ghost small" style="color:#EAECEF; border-color:rgba(255,255,255,0.2); cursor:pointer;">
+          Import
+          <input type="file" accept=".json" style="display:none;" onchange="importBackup(this)">
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="main" id="main"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- Sizes (edit this list to add/remove sizes) ---------- */
+const SIZES = ['Big','Medium','Small','+2 cm','+1.5 cm','+1 cm','-1 cm','Trim'];
+
+/* ---------- Icons ---------- */
+const ICONS = {
+  dashboard:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>`,
+  inventory:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>`,
+  in:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/><rect x="3" y="3" width="18" height="4" rx="1"/></svg>`,
+  out:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/><rect x="3" y="17" width="18" height="4" rx="1"/></svg>`,
+  partners:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="17.5" cy="8.5" r="2.6"/><path d="M15.8 14.2c2.7.4 4.7 2.5 4.7 5.3"/></svg>`,
+  plus:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>`,
+};
+
+/* ---------- State ---------- */
+let state = { products:[], partners:[], purchaseOrders:[], salesOrders:[], activity:[] };
+let currentTab = 'dashboard';
+let poSubtab = 'open';
+let soSubtab = 'open';
+let editingLines = [];
+let sizeFilter = 'all';
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const fmt = (n) => (Math.round((n+Number.EPSILON)*100)/100).toLocaleString();
+const today = () => new Date().toISOString().slice(0,10);
+
+function log(text){
+  state.activity.unshift({ date:new Date().toISOString(), text });
+  state.activity = state.activity.slice(0,40);
+}
+
+/* Make sure old saved products have a size field */
+function migrate(){
+  state.products.forEach(p => { if(p.size === undefined) p.size = ''; });
+}
+
+/* Size dropdown options. blank = no size set */
+function sizeOptions(selected){
+  return `<option value="" ${!selected?'selected':''}>— none —</option>` +
+    SIZES.map(s => `<option value="${s}" ${s===selected?'selected':''}>${s}</option>`).join('');
+}
+
+/* ---------- Storage ---------- */
+async function loadState(){
+  try{
+    const raw = localStorage.getItem('cargo-ledger-data');
+    if(raw){
+      const parsed = JSON.parse(raw);
+      state = Object.assign({products:[],partners:[],purchaseOrders:[],salesOrders:[],activity:[]}, parsed);
+    } else {
+      seedDemo();
+      await saveState();
+    }
+  }catch(e){
+    seedDemo();
+  }
+  migrate();
+  render();
+}
+
+let saveTimer = null;
+function saveState(){
+  return new Promise((resolve) => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try{
+        localStorage.setItem('cargo-ledger-data', JSON.stringify(state));
+      }catch(e){
+        showToast('Save failed — your browser storage may be full or disabled');
+      }
+      resolve();
+    }, 250);
+  });
+}
+
+function exportBackup(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `cargo-ledger-backup-${today()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try{
+      const parsed = JSON.parse(e.target.result);
+      state = Object.assign({products:[],partners:[],purchaseOrders:[],salesOrders:[],activity:[]}, parsed);
+      migrate();
+      await saveState();
+      render();
+      showToast('Backup restored');
+    }catch(err){
+      showToast('Invalid backup file');
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function seedDemo(){
+  const p1 = uid(), p2 = uid(), s1 = uid(), c1 = uid();
+  state.products = [
+    { id:p1, sku:'SKU-001', name:'Sample Product A', unit:'kg', size:'Big', stock:42, reorder:20 },
+    { id:p2, sku:'SKU-002', name:'Sample Product B', unit:'pcs', size:'Small', stock:8, reorder:15 },
+  ];
+  state.partners = [
+    { id:s1, name:'Sample Supplier Ltd.', type:'supplier' },
+    { id:c1, name:'Sample Customer s.r.o.', type:'customer' },
+  ];
+  log('Workspace created with sample data — edit or delete freely.');
+}
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---------- Render shell ---------- */
+function render(){
+  renderNav();
+  renderMain();
+}
+
+function renderNav(){
+  const items = [
+    ['dashboard','Dashboard','dashboard'],
+    ['inventory','Inventory','inventory'],
+    ['in','Purchase Orders','in'],
+    ['out','Sales Orders','out'],
+    ['partners','Partners','partners'],
+  ];
+  document.getElementById('nav').innerHTML = items.map(([key,label,icon]) => `
+    <div class="nav-item ${currentTab===key?'active':''}" onclick="setTab('${key}')">
+      ${ICONS[icon]}<span>${label}</span>
+    </div>`).join('');
+}
+
+function setTab(t){ currentTab = t; render(); }
+
+function renderMain(){
+  const el = document.getElementById('main');
+  if(currentTab==='dashboard') el.innerHTML = viewDashboard();
+  else if(currentTab==='inventory') el.innerHTML = viewInventory();
+  else if(currentTab==='in') el.innerHTML = viewOrders('in');
+  else if(currentTab==='out') el.innerHTML = viewOrders('out');
+  else if(currentTab==='partners') el.innerHTML = viewPartners();
+}
+
+/* ---------- Dashboard ---------- */
+function viewDashboard(){
+  const totalSkus = state.products.length;
+  const totalStock = state.products.reduce((a,p)=>a+p.stock,0);
+  const lowStock = state.products.filter(p=>p.stock<=p.reorder);
+  const openIn = state.purchaseOrders.filter(o=>o.status==='open').length;
+  const openOut = state.salesOrders.filter(o=>o.status==='open').length;
+
+  // Stock totals per size
+  const sizeRows = SIZES.map(s => {
+    const items = state.products.filter(p => p.size === s);
+    return { size:s, count:items.length, stock:items.reduce((a,p)=>a+p.stock,0) };
+  });
+  const unsized = state.products.filter(p => !p.size || !SIZES.includes(p.size));
+  if(unsized.length){
+    sizeRows.push({ size:'No size', count:unsized.length, stock:unsized.reduce((a,p)=>a+p.stock,0) });
+  }
+
+  return `
+    <div class="page-head">
+      <div><div class="page-eyebrow">Overview</div><h1 class="page-title">Dashboard</h1></div>
+    </div>
+    <div class="grid cols-4" style="margin-bottom:20px;">
+      <div class="card"><div class="stat-label">Active SKUs</div><div class="stat-value mono">${totalSkus}</div></div>
+      <div class="card"><div class="stat-label">Total Stock on Hand</div><div class="stat-value mono">${fmt(totalStock)}</div></div>
+      <div class="card"><div class="stat-label">Open Purchase Orders</div><div class="stat-value mono">${openIn}</div></div>
+      <div class="card"><div class="stat-label">Open Sales Orders</div><div class="stat-value mono">${openOut}</div></div>
+    </div>
+    <div class="grid cols-2">
+      <div class="card">
+        <div class="panel-title">Low Stock Alerts</div>
+        ${lowStock.length ? `<table><thead><tr><th>Product</th><th>Size</th><th>Stock</th><th>Reorder At</th></tr></thead><tbody>
+          ${lowStock.map(p=>`<tr><td>${p.name}</td><td class="mono">${p.size||'—'}</td><td class="mono">${fmt(p.stock)} ${p.unit}</td><td class="mono">${fmt(p.reorder)}</td></tr>`).join('')}
+        </tbody></table>` : `<div class="empty" style="padding:24px;">All stock levels are healthy.</div>`}
+      </div>
+      <div class="card">
+        <div class="panel-title">Recent Activity</div>
+        ${state.activity.length ? `<div>${state.activity.slice(0,8).map(a=>`
+          <div style="padding:8px 0; border-bottom:1px solid #F0EFE9; font-size:13px;">
+            <div>${a.text}</div>
+            <div style="color:var(--ink-soft); font-size:11px; margin-top:2px;">${new Date(a.date).toLocaleString()}</div>
+          </div>`).join('')}</div>` : `<div class="empty" style="padding:24px;">No activity yet.</div>`}
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="panel-title">Stock by Size</div>
+      <table>
+        <thead><tr><th>Size</th><th>Products</th><th>Total Stock</th></tr></thead>
+        <tbody>
+          ${sizeRows.map(r=>`<tr>
+            <td class="mono">${r.size}</td>
+            <td class="mono">${r.count}</td>
+            <td class="mono">${fmt(r.stock)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ---------- Inventory ---------- */
+function viewInventory(){
+  const list = state.products.filter(p => {
+    if(sizeFilter==='all') return true;
+    if(sizeFilter==='none') return !p.size;
+    return p.size === sizeFilter;
+  });
+
+  return `
+    <div class="page-head">
+      <div><div class="page-eyebrow">Stock Control</div><h1 class="page-title">Inventory</h1></div>
+      <button class="btn amber" onclick="openProductModal()">${ICONS.plus} Add Product</button>
+    </div>
+    <div class="filter-bar">
+      <label>Filter by size</label>
+      <select class="size-select" onchange="setSizeFilter(this.value)">
+        <option value="all" ${sizeFilter==='all'?'selected':''}>All sizes</option>
+        ${SIZES.map(s=>`<option value="${s}" ${sizeFilter===s?'selected':''}>${s}</option>`).join('')}
+        <option value="none" ${sizeFilter==='none'?'selected':''}>No size</option>
+      </select>
+    </div>
+    <div class="card">
+      ${list.length ? `
+      <table>
+        <thead><tr><th>SKU</th><th>Product</th><th>Size</th><th>Unit</th><th>Stock</th><th>Reorder Level</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          ${list.map(p=>`
+            <tr>
+              <td><span class="sku">${p.sku}</span></td>
+              <td>${p.name}</td>
+              <td>
+                <select class="size-select" onchange="setProductSize('${p.id}', this.value)">
+                  ${sizeOptions(p.size)}
+                </select>
+              </td>
+              <td class="mono">${p.unit}</td>
+              <td class="mono">${fmt(p.stock)}</td>
+              <td class="mono">${fmt(p.reorder)}</td>
+              <td>${p.stock<=p.reorder?'<span class="badge low">Low</span>':'<span class="badge ok">OK</span>'}</td>
+              <td style="text-align:right;">
+                <button class="btn ghost small" onclick="openProductModal('${p.id}')">Edit</button>
+                <button class="btn danger small" onclick="deleteProduct('${p.id}')">Delete</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>` : (state.products.length
+        ? `<div class="empty"><div class="stamp">No products in this size</div><div>Change the size filter to see other products.</div></div>`
+        : `<div class="empty"><div class="stamp">No products yet</div><div>Add your first product to start tracking stock.</div></div>`)}
+    </div>
+  `;
+}
+
+function setSizeFilter(v){ sizeFilter = v; render(); }
+
+async function setProductSize(id, size){
+  const p = state.products.find(x=>x.id===id);
+  if(!p) return;
+  p.size = size;
+  log(`Size of ${p.sku} set to ${size || 'none'}`);
+  await saveState();
+  render();
+  showToast('Size updated');
+}
+
+function openProductModal(id){
+  const p = id ? state.products.find(x=>x.id===id) : null;
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-head"><h3>${p?'Edit Product':'Add Product'}</h3><button class="close-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>SKU</label><input id="f-sku" value="${p?p.sku:''}" placeholder="e.g. SKU-003"></div>
+      <div class="field"><label>Product Name</label><input id="f-name" value="${p?p.name:''}" placeholder="e.g. Blue Widget"></div>
+      <div class="field"><label>Size</label><select id="f-size">${sizeOptions(p?p.size:'')}</select></div>
+      <div class="field"><label>Unit</label><input id="f-unit" value="${p?p.unit:'pcs'}" placeholder="kg, pcs, box..."></div>
+      <div class="field"><label>Current Stock</label><input id="f-stock" type="number" step="0.01" value="${p?p.stock:0}"></div>
+      <div class="field"><label>Reorder Level</label><input id="f-reorder" type="number" step="0.01" value="${p?p.reorder:0}"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn amber" onclick="saveProduct('${p?p.id:''}')">Save Product</button>
+    </div>
+  `;
+  showModal();
+}
+
+async function saveProduct(id){
+  const sku = document.getElementById('f-sku').value.trim();
+  const name = document.getElementById('f-name').value.trim();
+  const size = document.getElementById('f-size').value;
+  const unit = document.getElementById('f-unit').value.trim() || 'pcs';
+  const stock = parseFloat(document.getElementById('f-stock').value) || 0;
+  const reorder = parseFloat(document.getElementById('f-reorder').value) || 0;
+  if(!sku || !name){ showToast('SKU and name are required'); return; }
+
+  if(id){
+    const p = state.products.find(x=>x.id===id);
+    Object.assign(p, {sku,name,size,unit,stock,reorder});
+    log(`Updated product ${sku}`);
+  } else {
+    state.products.push({ id:uid(), sku, name, size, unit, stock, reorder });
+    log(`Added product ${sku}`);
+  }
+  await saveState();
+  closeModal();
+  render();
+  showToast('Product saved');
+}
+
+async function deleteProduct(id){
+  const p = state.products.find(x=>x.id===id);
+  state.products = state.products.filter(x=>x.id!==id);
+  log(`Removed product ${p.sku}`);
+  await saveState();
+  render();
+  showToast('Product deleted');
+}
+
+/* ---------- Partners ---------- */
+function viewPartners(){
+  return `
+    <div class="page-head">
+      <div><div class="page-eyebrow">Contacts</div><h1 class="page-title">Partners</h1></div>
+      <button class="btn amber" onclick="openPartnerModal()">${ICONS.plus} Add Partner</button>
+    </div>
+    <div class="card">
+      ${state.partners.length ? `
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th></th></tr></thead>
+        <tbody>
+          ${state.partners.map(p=>`
+            <tr>
+              <td>${p.name}</td>
+              <td>${p.type==='supplier'?'<span class="badge open">Supplier</span>':'<span class="badge done">Customer</span>'}</td>
+              <td style="text-align:right;">
+                <button class="btn ghost small" onclick="openPartnerModal('${p.id}')">Edit</button>
+                <button class="btn danger small" onclick="deletePartner('${p.id}')">Delete</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>` : `<div class="empty"><div class="stamp">No partners yet</div><div>Add suppliers and customers to link them to orders.</div></div>`}
+    </div>
+  `;
+}
+
+function openPartnerModal(id){
+  const p = id ? state.partners.find(x=>x.id===id) : null;
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-head"><h3>${p?'Edit Partner':'Add Partner'}</h3><button class="close-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Name</label><input id="f-pname" value="${p?p.name:''}" placeholder="Company name"></div>
+      <div class="field"><label>Type</label>
+        <select id="f-ptype">
+          <option value="supplier" ${p&&p.type==='supplier'?'selected':''}>Supplier</option>
+          <option value="customer" ${p&&p.type==='customer'?'selected':''}>Customer</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn amber" onclick="savePartner('${p?p.id:''}')">Save Partner</button>
+    </div>
+  `;
+  showModal();
+}
+
+async function savePartner(id){
+  const name = document.getElementById('f-pname').value.trim();
+  const type = document.getElementById('f-ptype').value;
+  if(!name){ showToast('Name is required'); return; }
+  if(id){
+    Object.assign(state.partners.find(x=>x.id===id), {name,type});
+    log(`Updated partner ${name}`);
+  } else {
+    state.partners.push({id:uid(), name, type});
+    log(`Added partner ${name}`);
+  }
+  await saveState();
+  closeModal(); render(); showToast('Partner saved');
+}
+
+async function deletePartner(id){
+  const p = state.partners.find(x=>x.id===id);
+  state.partners = state.partners.filter(x=>x.id!==id);
+  log(`Removed partner ${p.name}`);
+  await saveState(); render(); showToast('Partner deleted');
+}
+
+/* ---------- Orders (shared for PO / SO) ---------- */
+function viewOrders(kind){
+  const isIn = kind==='in';
+  const list = isIn ? state.purchaseOrders : state.salesOrders;
+  const subtab = isIn ? poSubtab : soSubtab;
+  const filtered = list.filter(o => subtab==='all' ? true : o.status===subtab);
+  const partnerLabel = isIn ? 'Supplier' : 'Customer';
+  const partnerType = isIn ? 'supplier' : 'customer';
+  const actionLabel = isIn ? 'Receive' : 'Ship';
+
+  return `
+    <div class="page-head">
+      <div><div class="page-eyebrow">${isIn?'Inbound':'Outbound'}</div><h1 class="page-title">${isIn?'Purchase Orders':'Sales Orders'}</h1></div>
+      <button class="btn amber" onclick="openOrderModal('${kind}')">${ICONS.plus} New ${isIn?'Purchase':'Sales'} Order</button>
+    </div>
+    <div class="subtabs">
+      <div class="subtab ${subtab==='open'?'active':''}" onclick="setOrderSubtab('${kind}','open')">Open</div>
+      <div class="subtab ${subtab==='done'?'active':''}" onclick="setOrderSubtab('${kind}','done')">${isIn?'Received':'Shipped'}</div>
+      <div class="subtab ${subtab==='all'?'active':''}" onclick="setOrderSubtab('${kind}','all')">All</div>
+    </div>
+    <div class="card">
+      ${filtered.length ? `
+      <table>
+        <thead><tr><th>Order #</th><th>${partnerLabel}</th><th>Date</th><th>Lines</th><th>Status</th><th>Tracking</th><th></th></tr></thead>
+        <tbody>
+          ${filtered.map(o=>{
+            const partner = state.partners.find(p=>p.id===o.partnerId);
+            const trackingCell = (!isIn && o.tracking)
+              ? `<div class="mono" style="font-size:12px;">${o.tracking.trackingNumber}</div><div style="font-size:11px; color:var(--ink-soft);">${o.tracking.carrier}</div><a href="https://www.aftership.com/track/${encodeURIComponent(o.tracking.trackingNumber)}" target="_blank" rel="noopener" style="font-size:11px; font-weight:600;">Track on AfterShip ↗</a>`
+              : `<span style="color:var(--ink-soft);">—</span>`;
+            return `<tr>
+              <td class="mono">${o.number}</td>
+              <td>${partner?partner.name:'—'}</td>
+              <td class="mono">${o.date}</td>
+              <td>${o.lines.length} item${o.lines.length!==1?'s':''}</td>
+              <td>${o.status==='open'?'<span class="badge open">Open</span>':`<span class="badge done">${isIn?'Received':'Shipped'}</span>`}</td>
+              <td>${trackingCell}</td>
+              <td style="text-align:right;">
+                ${o.status==='open'?(isIn
+                  ? `<button class="btn amber small" onclick="fulfillOrder('${kind}','${o.id}')">${actionLabel}</button>`
+                  : `<button class="btn amber small" onclick="openShipModal('${o.id}')">${actionLabel}</button>`
+                ):''}
+                <button class="btn danger small" onclick="deleteOrder('${kind}','${o.id}')">Delete</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>` : `<div class="empty"><div class="stamp">No orders here</div><div>Create a ${isIn?'purchase':'sales'} order to get started.</div></div>`}
+    </div>
+  `;
+}
+
+function setOrderSubtab(kind, val){
+  if(kind==='in') poSubtab = val; else soSubtab = val;
+  render();
+}
+
+function openOrderModal(kind){
+  const isIn = kind==='in';
+  const partnerType = isIn ? 'supplier' : 'customer';
+  const partners = state.partners.filter(p=>p.type===partnerType);
+  editingLines = [{ productId: state.products[0]?.id || '', qty: 1 }];
+
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-head"><h3>New ${isIn?'Purchase':'Sales'} Order</h3><button class="close-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>${isIn?'Supplier':'Customer'}</label>
+        <select id="f-partner">
+          ${partners.length ? partners.map(p=>`<option value="${p.id}">${p.name}</option>`).join('') : `<option value="">No ${partnerType}s — add one first</option>`}
+        </select>
+      </div>
+      <div class="field"><label>Date</label><input id="f-date" type="date" value="${today()}"></div>
+      <div class="field">
+        <label>Line Items</label>
+        <div id="lines-container"></div>
+        <button class="btn ghost small" onclick="addLine()" style="margin-top:4px;">${ICONS.plus} Add Line</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn amber" onclick="saveOrder('${kind}')">Create Order</button>
+    </div>
+  `;
+  renderLines();
+  showModal();
+}
+
+function renderLines(){
+  const c = document.getElementById('lines-container');
+  if(!c) return;
+  c.innerHTML = editingLines.map((l,i)=>`
+    <div class="line-item-row">
+      <div class="field">
+        <select onchange="editingLines[${i}].productId=this.value">
+          ${state.products.map(p=>`<option value="${p.id}" ${p.id===l.productId?'selected':''}>${p.name}${p.size?' · '+p.size:''} (${p.sku})</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" style="max-width:90px;">
+        <input type="number" min="0" step="0.01" value="${l.qty}" onchange="editingLines[${i}].qty=parseFloat(this.value)||0">
+      </div>
+      <button class="remove-line" onclick="removeLine(${i})">&times;</button>
+    </div>
+  `).join('');
+}
+
+function addLine(){
+  editingLines.push({ productId: state.products[0]?.id || '', qty: 1 });
+  renderLines();
+}
+function removeLine(i){
+  editingLines.splice(i,1);
+  renderLines();
+}
+
+async function saveOrder(kind){
+  const isIn = kind==='in';
+  const partnerId = document.getElementById('f-partner').value;
+  const date = document.getElementById('f-date').value || today();
+  if(!partnerId){ showToast(`Add a ${isIn?'supplier':'customer'} first`); return; }
+  const lines = editingLines.filter(l=>l.productId && l.qty>0);
+  if(!lines.length){ showToast('Add at least one line item'); return; }
+
+  const list = isIn ? state.purchaseOrders : state.salesOrders;
+  const prefix = isIn ? 'PO' : 'SO';
+  const number = `${prefix}-${new Date().getFullYear()}-${String(list.length+1).padStart(4,'0')}`;
+  const order = { id:uid(), number, partnerId, date, status:'open', lines };
+  list.push(order);
+  log(`Created ${prefix} ${number} (${lines.length} line${lines.length!==1?'s':''})`);
+  await saveState();
+  closeModal(); render(); showToast('Order created');
+}
+
+async function fulfillOrder(kind, id){
+  // used for purchase orders (receiving) — no tracking needed
+  const list = state.purchaseOrders;
+  const order = list.find(o=>o.id===id);
+
+  order.lines.forEach(line=>{
+    const p = state.products.find(x=>x.id===line.productId);
+    if(p) p.stock += line.qty;
+  });
+  order.status = 'done';
+  log(`Received ${order.number}`);
+  await saveState();
+  render();
+  showToast('Stock received');
+}
+
+function openShipModal(id){
+  const order = state.salesOrders.find(o=>o.id===id);
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-head"><h3>Ship ${order.number}</h3><button class="close-x" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Carrier</label><input id="f-carrier" placeholder="e.g. DPD, FedEx, DB Schenker"></div>
+      <div class="field"><label>Tracking Number</label><input id="f-trackno" placeholder="e.g. 1Z999AA10123456784"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn amber" onclick="shipOrder('${id}')">Confirm Shipment</button>
+    </div>
+  `;
+  showModal();
+}
+
+async function shipOrder(id){
+  const order = state.salesOrders.find(o=>o.id===id);
+  const carrier = document.getElementById('f-carrier').value.trim();
+  const trackingNumber = document.getElementById('f-trackno').value.trim();
+
+  for(const line of order.lines){
+    const p = state.products.find(x=>x.id===line.productId);
+    if(!p || p.stock < line.qty){
+      showToast(`Not enough stock for ${p?p.name:'item'} — only ${p?fmt(p.stock):0} available`);
+      return;
+    }
+  }
+
+  order.lines.forEach(line=>{
+    const p = state.products.find(x=>x.id===line.productId);
+    if(p) p.stock -= line.qty;
+  });
+  order.status = 'done';
+  order.tracking = { carrier: carrier || 'Not specified', trackingNumber: trackingNumber || 'Not provided', shippedDate: today() };
+  log(`Shipped ${order.number}${trackingNumber ? ' — tracking ' + trackingNumber : ''}`);
+  await saveState();
+  closeModal();
+  render();
+  showToast('Order shipped');
+}
+
+async function deleteOrder(kind, id){
+  const isIn = kind==='in';
+  if(isIn) state.purchaseOrders = state.purchaseOrders.filter(o=>o.id!==id);
+  else state.salesOrders = state.salesOrders.filter(o=>o.id!==id);
+  log(`Deleted an order`);
+  await saveState();
+  render();
+  showToast('Order deleted');
+}
+
+/* ---------- Modal helpers ---------- */
+function showModal(){ document.getElementById('overlay').classList.add('show'); }
+function closeModal(){ document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
+
+/* ---------- Init ---------- */
+loadState();
+</script>
+</body>
+</html>
